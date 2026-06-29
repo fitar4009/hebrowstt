@@ -20,8 +20,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # ── Stage 1: Bootstrap Gradle wrapper ────────────────────────────────
-      # The binary gradle-wrapper.jar is excluded from git; generate it here.
+      # ── Stage 1: Bootstrap Gradle wrapper ──────────────────────────────
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -32,25 +31,15 @@ jobs:
           gradle wrapper --gradle-version 8.7
           chmod +x gradlew
 
-      # ── Stage 2: Download sherpa-onnx native .so libraries ───────────────
-      # Fetches the latest Android JNI archive from sherpa-onnx releases and
-      # unpacks it into app/src/main/jniLibs/<ABI>/ so the APK links correctly.
+      # ── Stage 2: Download sherpa-onnx native .so libraries ─────────────
       - name: Download sherpa-onnx Android JNI libraries
         run: |
           ASSET_URL=$(curl -fsSL \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/k2-fsa/sherpa-onnx/releases/latest \
-            | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for asset in data.get('assets', []):
-    name = asset['name']
-    if 'android' in name.lower() and name.endswith('.tar.bz2'):
-        print(asset['browser_download_url'])
-        break
-")
+            | jq -r '[.assets[] | select(.name | ascii_downcase | test("android")) | select(.name | endswith(".tar.bz2")) | .browser_download_url][0]')
 
-          if [ -z "$ASSET_URL" ]; then
+          if [ -z "$ASSET_URL" ] || [ "$ASSET_URL" = "null" ]; then
             echo "ERROR: No Android .tar.bz2 asset found in the latest sherpa-onnx release."
             exit 1
           fi
@@ -73,7 +62,7 @@ for asset in data.get('assets', []):
           echo "jniLibs tree:"
           find app/src/main/jniLibs -name "*.so" | sort
 
-      # ── Build ─────────────────────────────────────────────────────────────
+      # ── Build ───────────────────────────────────────────────────────────
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
