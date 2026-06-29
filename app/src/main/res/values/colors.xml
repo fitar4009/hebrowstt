@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand -->
+    <color name="colorPrimary">#1976D2</color>
+    <color name="colorPrimaryDark">#1565C0</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorSecondary">#0097A7</color>
+
+    <!-- Status indicator colours -->
+    <color name="status_idle">#9E9E9E</color>
+    <color name="status_listening">#43A047</color>
+    <color name="status_recording">#FB8C00</color>
+    <color name="status_transcribing">#1E88E5</color>
+    <color name="status_error">#E53935</color>
+</resources>

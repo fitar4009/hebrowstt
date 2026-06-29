@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">תמלול דיבור</string>
+
+    <!-- Status labels -->
+    <string name="status_idle">ממתין</string>
+    <string name="status_initializing">טוען מודל…</string>
+    <string name="status_listening">מאזין…</string>
+    <string name="status_recording">מקליט דיבור</string>
+    <string name="status_transcribing">ממלל…</string>
+    <string name="status_model_missing">קבצי מודל חסרים</string>
+    <string name="status_permission_denied">אין הרשאת מיקרופון</string>
+
+    <!-- UI -->
+    <string name="btn_clear">נקה תמלול</string>
+    <string name="transcript_hint">הטקסט המתומלל יופיע כאן…</string>
+    <string name="settings_title">הגדרות</string>
+    <string name="menu_settings">הגדרות</string>
+
+    <!-- Model-missing message – %1$s is the model directory path -->
+    <string name="model_missing_instructions">קבצי המודל חסרים.\n\nיש למקם את הקבצים בנתיב:\n%1$s\n\nקבצים נדרשים (גרסה ממוזערת):\n  tiny-encoder.int8.onnx\n  tiny-decoder.int8.onnx\n  tiny-tokens.txt\n\nהורד מ:\nhttps://github.com/k2-fsa/sherpa-onnx/releases\n(חפש: sherpa-onnx-whisper-tiny)\n\nלאחר מכן הפעל מחדש את האפליקציה.</string>
+
+    <!-- Preferences -->
+    <string name="pref_category_silence">זיהוי שתיקה</string>
+    <string name="pref_silence_threshold_title">סף עוצמת שתיקה</string>
+    <string name="pref_silence_threshold_summary">ערך נמוך יותר מגביר רגישות (5 – 100)</string>
+    <string name="pref_silence_duration_title">משך שתיקה לפני תמלול (ms)</string>
+    <string name="pref_silence_duration_summary">זמן שתיקה בסיום דיבור לפני שמתחיל תמלול (500 – 3000 ms)</string>
+</resources>

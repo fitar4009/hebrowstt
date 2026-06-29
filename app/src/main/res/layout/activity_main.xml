@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Toolbar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:elevation="4dp"
+        app:title="@string/app_name" />
+
+    <!-- Content below toolbar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Status row (RTL: indicator right, label left) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layoutDirection="rtl"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <View
+                android:id="@+id/statusIndicator"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:background="@drawable/circle"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/status_idle"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+        </LinearLayout>
+
+        <!-- Transcript card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginBottom="12dp"
+            app:cardElevation="0dp"
+            app:cardCornerRadius="12dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/colorOutlineVariant">
+
+            <ScrollView
+                android:id="@+id/scrollView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <TextView
+                    android:id="@+id/tvTranscript"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="14dp"
+                    android:textDirection="anyRtl"
+                    android:gravity="top|end"
+                    android:textAppearance="?attr/textAppearanceBodyLarge"
+                    android:lineSpacingMultiplier="1.5"
+                    android:hint="@string/transcript_hint" />
+
+            </ScrollView>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Clear button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClear"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_clear" />
+
+    </LinearLayout>
+</LinearLayout>
