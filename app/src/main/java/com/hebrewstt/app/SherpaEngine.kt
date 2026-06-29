@@ -11,21 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/**
- * Wraps [OfflineRecognizer] for the app.
- *
- * The model directory must be placed at:
- *   <filesDir>/sherpa-onnx-whisper-tiny/
- *
- * Required files (quantised variant):
- *   tiny-encoder.int8.onnx
- *   tiny-decoder.int8.onnx
- *   tiny-tokens.txt
- *
- * Required native libs (place in app/src/main/jniLibs/<abi>/):
- *   libsherpa-onnx-jni.so
- *   libonnxruntime.so
- */
 class SherpaEngine(private val context: Context) {
 
     enum class Variant { QUANTIZED, STANDARD }
@@ -36,7 +21,6 @@ class SherpaEngine(private val context: Context) {
     val modelDir: String
         get() = "${context.filesDir.absolutePath}/sherpa-onnx-whisper-tiny"
 
-    /** Returns true if all required files for [variant] are present on disk. */
     fun modelFilesExist(variant: Variant = Variant.QUANTIZED): Boolean {
         val dir = File(modelDir)
         val (enc, dec) = encoderDecoder(variant)
@@ -46,15 +30,19 @@ class SherpaEngine(private val context: Context) {
                 File(dir, "tiny-tokens.txt").exists()
     }
 
-    /**
-     * Initialises the recogniser on [Dispatchers.IO]. Safe to call from Main.
-     * Returns true on success, false if files are missing or initialisation fails.
-     */
     suspend fun initialize(
         variant: Variant = Variant.QUANTIZED,
         language: String = "he",
     ): Boolean = withContext(Dispatchers.IO) {
         try {
+            // Always ensure the directory exists so the user can push model
+            // files into it via adb without extra manual mkdir steps.
+            val dir = File(modelDir)
+            if (!dir.exists()) {
+                val created = dir.mkdirs()
+                Log.i(TAG, "Model directory created at $modelDir: $created")
+            }
+
             recognizer?.release()
             recognizer = null
 
@@ -74,10 +62,6 @@ class SherpaEngine(private val context: Context) {
         }
     }
 
-    /**
-     * Transcribes [samples] (FloatArray, 16 kHz, mono, ±1.0) on [Dispatchers.IO].
-     * Returns the recognised text, or an empty string on error.
-     */
     suspend fun transcribe(samples: FloatArray): String = withContext(Dispatchers.IO) {
         val rec = recognizer ?: return@withContext ""
         val stream = rec.createStream()
@@ -93,10 +77,6 @@ class SherpaEngine(private val context: Context) {
         }
     }
 
-    /**
-     * Updates language/task without rebuilding the full recogniser (fast path).
-     * Only call after a successful [initialize].
-     */
     fun setLanguage(language: String) {
         val rec = recognizer ?: return
         val cfg = currentConfig ?: return
@@ -109,13 +89,10 @@ class SherpaEngine(private val context: Context) {
         rec.setConfig(updated)
     }
 
-    /** Must be called in onDestroy to free native memory. */
     fun release() {
         recognizer?.release()
         recognizer = null
     }
-
-    // ── private ──────────────────────────────────────────────────────────────
 
     private fun buildConfig(variant: Variant, language: String): OfflineRecognizerConfig {
         val (enc, dec) = encoderDecoder(variant)
