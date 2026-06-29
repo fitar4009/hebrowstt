@@ -18,8 +18,17 @@ class SherpaEngine(private val context: Context) {
     private var recognizer: OfflineRecognizer? = null
     private var currentConfig: OfflineRecognizerConfig? = null
 
+    /**
+     * Uses external app-private storage so the folder is visible in
+     * Android/data/com.hebrewstt.app/files/sherpa-onnx-whisper-tiny/
+     * and can be accessed by a file manager without adb.
+     * Falls back to internal storage if external is unavailable.
+     */
     val modelDir: String
-        get() = "${context.filesDir.absolutePath}/sherpa-onnx-whisper-tiny"
+        get() {
+            val base = context.getExternalFilesDir(null) ?: context.filesDir
+            return "${base.absolutePath}/sherpa-onnx-whisper-tiny"
+        }
 
     fun modelFilesExist(variant: Variant = Variant.QUANTIZED): Boolean {
         val dir = File(modelDir)
@@ -35,12 +44,10 @@ class SherpaEngine(private val context: Context) {
         language: String = "he",
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            // Always ensure the directory exists so the user can push model
-            // files into it via adb without extra manual mkdir steps.
             val dir = File(modelDir)
             if (!dir.exists()) {
                 val created = dir.mkdirs()
-                Log.i(TAG, "Model directory created at $modelDir: $created")
+                Log.i(TAG, "Model directory created at $modelDir (success=$created)")
             }
 
             recognizer?.release()
