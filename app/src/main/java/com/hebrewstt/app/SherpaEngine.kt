@@ -15,57 +15,82 @@ class SherpaEngine(private val context: Context) {
 
     enum class Variant { QUANTIZED, STANDARD }
 
+    sealed class InitResult {
+        object Success : InitResult()
+        data class ModelMissing(val diagnosis: String) : InitResult()
+        data class NativeLibError(val message: String) : InitResult()
+        data class UnknownError(val message: String) : InitResult()
+    }
+
     private var recognizer: OfflineRecognizer? = null
     private var currentConfig: OfflineRecognizerConfig? = null
 
     /**
-     * Uses external app-private storage so the folder is visible in
-     * Android/data/com.hebrewstt.app/files/sherpa-onnx-whisper-tiny/
-     * and can be accessed by a file manager without adb.
-     * Falls back to internal storage if external is unavailable.
+     * Resolved once and cached — guarantees the same path is used for directory
+     * creation, file existence checks, and config building throughout the app's
+     * lifetime, even if external-storage state fluctuates between calls.
      */
-    val modelDir: String
-        get() {
-            val base = context.getExternalFilesDir(null) ?: context.filesDir
-            return "${base.absolutePath}/sherpa-onnx-whisper-tiny"
+    val modelDir: String by lazy {
+        val base = context.getExternalFilesDir(null) ?: context.filesDir
+        "${base.absolutePath}/sherpa-onnx-whisper-tiny".also {
+            Log.i(TAG, "modelDir resolved to: $it")
         }
+    }
 
     fun modelFilesExist(variant: Variant = Variant.QUANTIZED): Boolean {
-        val dir = File(modelDir)
         val (enc, dec) = encoderDecoder(variant)
-        return dir.isDirectory &&
-                File(dir, enc).exists() &&
-                File(dir, dec).exists() &&
-                File(dir, "tiny-tokens.txt").exists()
+        return File(modelDir).isDirectory &&
+                File(modelDir, enc).exists() &&
+                File(modelDir, dec).exists() &&
+                File(modelDir, "tiny-tokens.txt").exists()
+    }
+
+    /** Returns a human-readable list of which files are present / absent. */
+    fun diagnose(variant: Variant = Variant.QUANTIZED): String {
+        val (enc, dec) = encoderDecoder(variant)
+        val expected = listOf(enc, dec, "tiny-tokens.txt")
+        val dir = File(modelDir)
+        val sb = StringBuilder()
+        sb.appendLine("נתיב: $modelDir")
+        sb.appendLine("תיקייה קיימת: ${dir.isDirectory}")
+        for (name in expected) {
+            val exists = File(dir, name).exists()
+            sb.appendLine("  ${if (exists) "✓" else "✗"}  $name")
+        }
+        if (dir.isDirectory) {
+            val found = dir.listFiles()?.map { it.name } ?: emptyList()
+            if (found.isNotEmpty()) sb.appendLine("קבצים בתיקייה: ${found.joinToString()}")
+        }
+        return sb.toString().trimEnd()
     }
 
     suspend fun initialize(
         variant: Variant = Variant.QUANTIZED,
         language: String = "he",
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): InitResult = withContext(Dispatchers.IO) {
+        // Ensure directory exists so the user can push files into it
+        File(modelDir).mkdirs()
+
+        if (!modelFilesExist(variant)) {
+            Log.e(TAG, "Model files missing.\n${diagnose(variant)}")
+            return@withContext InitResult.ModelMissing(diagnose(variant))
+        }
+
+        recognizer?.release()
+        recognizer = null
+
         try {
-            val dir = File(modelDir)
-            if (!dir.exists()) {
-                val created = dir.mkdirs()
-                Log.i(TAG, "Model directory created at $modelDir (success=$created)")
-            }
-
-            recognizer?.release()
-            recognizer = null
-
-            if (!modelFilesExist(variant)) {
-                Log.e(TAG, "Model files missing in $modelDir for variant $variant")
-                return@withContext false
-            }
-
             val cfg = buildConfig(variant, language)
             currentConfig = cfg
             recognizer = OfflineRecognizer(assetManager = null, config = cfg)
-            Log.i(TAG, "OfflineRecognizer initialised (language=$language, variant=$variant)")
-            true
+            Log.i(TAG, "OfflineRecognizer ready (lang=$language, variant=$variant)")
+            InitResult.Success
+        } catch (e: UnsatisfiedLinkError) {
+            Log.e(TAG, "Native library missing: ${e.message}")
+            InitResult.NativeLibError(e.message ?: "UnsatisfiedLinkError")
         } catch (e: Exception) {
-            Log.e(TAG, "Initialisation failed: ${e.message}", e)
-            false
+            Log.e(TAG, "Init failed: ${e.message}", e)
+            InitResult.UnknownError(e.message ?: e.javaClass.simpleName)
         }
     }
 

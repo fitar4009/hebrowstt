@@ -27,7 +27,6 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var modelReady = false
     @Volatile private var recording = false
 
-    // ── permission launcher ──────────────────────────────────────────────────
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -42,12 +41,17 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        audioRecorder  = AudioRecorder(this)
+        audioRecorder   = AudioRecorder(this)
         silenceDetector = SilenceDetector()
-        sherpaEngine   = SherpaEngine(this)
+        sherpaEngine    = SherpaEngine(this)
 
         binding.btnClear.setOnClickListener {
             binding.tvTranscript.text = ""
+        }
+
+        binding.btnRetry.setOnClickListener {
+            binding.btnRetry.visibility = View.GONE
+            initModel()
         }
 
         checkPermissionAndInit()
@@ -93,14 +97,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun initModel() {
         showStatus(Status.INITIALIZING)
+        binding.btnRetry.visibility = View.GONE
+
         lifecycleScope.launch {
-            val ok = sherpaEngine.initialize()
-            if (ok) {
-                modelReady = true
-                startRecording()
-            } else {
-                showStatus(Status.MODEL_MISSING)
-                binding.tvTranscript.text = buildModelMissingMessage()
+            when (val result = sherpaEngine.initialize()) {
+                is SherpaEngine.InitResult.Success -> {
+                    modelReady = true
+                    startRecording()
+                }
+                is SherpaEngine.InitResult.ModelMissing -> {
+                    showStatus(Status.MODEL_MISSING)
+                    binding.tvTranscript.text =
+                        getString(R.string.model_missing_instructions, result.diagnosis)
+                    binding.btnRetry.visibility = View.VISIBLE
+                }
+                is SherpaEngine.InitResult.NativeLibError -> {
+                    showStatus(Status.MODEL_MISSING)
+                    binding.tvTranscript.text =
+                        getString(R.string.native_lib_error, result.message)
+                    binding.btnRetry.visibility = View.GONE   // retrying won't help
+                }
+                is SherpaEngine.InitResult.UnknownError -> {
+                    showStatus(Status.MODEL_MISSING)
+                    binding.tvTranscript.text =
+                        getString(R.string.unknown_init_error, result.message)
+                    binding.btnRetry.visibility = View.VISIBLE
+                }
             }
         }
     }
@@ -119,7 +141,6 @@ class MainActivity : AppCompatActivity() {
             val utterance = silenceDetector.process(chunk)
 
             if (utterance != null) {
-                // ── end-of-utterance: transcribe ──────────────────────────
                 wasSpeaking = false
                 runOnUiThread { showStatus(Status.TRANSCRIBING) }
 
@@ -131,7 +152,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                // ── no utterance yet: update indicator only on state change ─
                 val speaking = silenceDetector.isCurrentlySpeaking
                 if (speaking != wasSpeaking) {
                     wasSpeaking = speaking
@@ -155,7 +175,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadSettings() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        // threshold stored as integer 5–100; divide by 1000 for normalised RMS
         silenceDetector.silenceThreshold = prefs.getInt("silence_threshold", 20) / 1000f
         silenceDetector.silenceDurationMs = prefs.getInt("silence_duration_ms", 1500)
     }
@@ -169,24 +188,19 @@ class MainActivity : AppCompatActivity() {
         binding.scrollView.post { binding.scrollView.fullScroll(View.FOCUS_DOWN) }
     }
 
-    private fun buildModelMissingMessage(): String =
-        getString(R.string.model_missing_instructions, sherpaEngine.modelDir)
-
     private fun showStatus(s: Status) {
         val (labelRes, colorRes) = when (s) {
-            Status.IDLE             -> R.string.status_idle             to R.color.status_idle
-            Status.INITIALIZING     -> R.string.status_initializing     to R.color.status_idle
-            Status.LISTENING        -> R.string.status_listening        to R.color.status_listening
-            Status.RECORDING_SPEECH -> R.string.status_recording        to R.color.status_recording
-            Status.TRANSCRIBING     -> R.string.status_transcribing     to R.color.status_transcribing
-            Status.MODEL_MISSING    -> R.string.status_model_missing    to R.color.status_error
-            Status.PERMISSION_DENIED-> R.string.status_permission_denied to R.color.status_error
+            Status.IDLE              -> R.string.status_idle              to R.color.status_idle
+            Status.INITIALIZING      -> R.string.status_initializing      to R.color.status_idle
+            Status.LISTENING         -> R.string.status_listening         to R.color.status_listening
+            Status.RECORDING_SPEECH  -> R.string.status_recording         to R.color.status_recording
+            Status.TRANSCRIBING      -> R.string.status_transcribing      to R.color.status_transcribing
+            Status.MODEL_MISSING     -> R.string.status_model_missing     to R.color.status_error
+            Status.PERMISSION_DENIED -> R.string.status_permission_denied to R.color.status_error
         }
         binding.tvStatus.text = getString(labelRes)
         binding.statusIndicator.setBackgroundColor(ContextCompat.getColor(this, colorRes))
     }
-
-    // ── status enum ──────────────────────────────────────────────────────────
 
     private enum class Status {
         IDLE, INITIALIZING, LISTENING, RECORDING_SPEECH, TRANSCRIBING,
