@@ -24,6 +24,7 @@ data class OfflineModelConfig(
     var tokens: String = "",
     var modelType: String = "",
     var modelingUnit: String = "cjkchar",
+    var bpeVocab: String = "",
     var numThreads: Int = 2,
     var debug: Boolean = false,
     var provider: String = "cpu",
