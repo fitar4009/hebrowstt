@@ -23,6 +23,7 @@ data class OfflineModelConfig(
     var whisper: OfflineWhisperModelConfig = OfflineWhisperModelConfig(),
     var tokens: String = "",
     var modelType: String = "",
+    var modelingUnit: String = "cjkchar",
     var numThreads: Int = 2,
     var debug: Boolean = false,
     var provider: String = "cpu",
