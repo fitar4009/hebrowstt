@@ -38,6 +38,7 @@ data class OfflineRecognizerConfig(
     var hotwordsScore: Float = 1.5f,
     var ruleFsts: String = "",
     var ruleFars: String = "",
+    var blankPenalty: Float = 0.0f,
 )
 
 data class OfflineRecognizerResult(
