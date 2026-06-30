@@ -3,8 +3,13 @@ package com.k2fsa.sherpa.onnx
 import android.content.res.AssetManager
 
 // ---------------------------------------------------------------------------
-// Config data classes – field names must exactly match the JNI C++ accessors
+// Config data classes – ALL field names must exactly match the JNI C++ accessors
 // ---------------------------------------------------------------------------
+
+data class OfflineLMConfig(
+    var model: String = "",
+    var scale: Float = 1.0f,
+)
 
 data class OfflineWhisperModelConfig(
     var encoder: String = "",
@@ -26,10 +31,13 @@ data class OfflineModelConfig(
 data class OfflineRecognizerConfig(
     var featConfig: FeatureConfig = FeatureConfig(),
     var modelConfig: OfflineModelConfig = OfflineModelConfig(),
+    var lmConfig: OfflineLMConfig = OfflineLMConfig(),
     var decodingMethod: String = "greedy_search",
     var maxActivePaths: Int = 4,
     var hotwordsFile: String = "",
     var hotwordsScore: Float = 1.5f,
+    var ruleFsts: String = "",
+    var ruleFars: String = "",
 )
 
 data class OfflineRecognizerResult(
@@ -80,12 +88,12 @@ class OfflineRecognizer(
     fun getResult(stream: OfflineStream): OfflineRecognizerResult {
         val arr = getResult(ptr, stream.ptr)
         return OfflineRecognizerResult(
-            text      = arr[0] as String,
-            tokens    = arr[1] as Array<String>,
+            text       = arr[0] as String,
+            tokens     = arr[1] as Array<String>,
             timestamps = arr[2] as FloatArray,
-            lang      = arr[3] as String,
-            emotion   = arr[4] as String,
-            event     = arr[5] as String,
+            lang       = arr[3] as String,
+            emotion    = arr[4] as String,
+            event      = arr[5] as String,
         )
     }
 
